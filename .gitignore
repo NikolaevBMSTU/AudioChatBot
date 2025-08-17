@@ -1,0 +1,8 @@
+# Virtual envi of Python
+/*venv
+
+# Stand-depends variables, credentials, etc.
+.env
+
+# Pythons caches
+*.pyc

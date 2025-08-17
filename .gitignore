@@ -6,3 +6,6 @@
 
 # Pythons caches
 *.pyc
+
+# Graph visualization output
+*.png

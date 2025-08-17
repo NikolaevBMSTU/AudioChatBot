@@ -2,7 +2,6 @@ import os
 from typing_extensions import TypedDict
 
 from langgraph.graph import StateGraph, START, END
-from langgraph.graph.message import add_messages
 
 
 class State(TypedDict):
@@ -14,8 +13,8 @@ class State(TypedDict):
 graph_builder = StateGraph(State)
 
 
-from chatbot.CustomOllamaLLM import CustomOllamaLLM
-from chatbot.CustomOllamaLLM import CustomLLMConfig
+from chat_bot.CustomOllamaLLM import CustomOllamaLLM
+from chat_bot.CustomOllamaLLM import CustomLLMConfig
 
 config = CustomLLMConfig(
     api_url=os.getenv("OLLAMA_API_URL").strip(),
@@ -41,24 +40,16 @@ graph_builder.add_edge("chatbot", END)
 
 graph = graph_builder.compile()
 
+# Compiled graph visualization (optional)
+try:
+    with open("graph.png", "wb") as png:
+        png.write(graph.get_graph().draw_mermaid_png())
+except Exception:
+    pass
 
+# Вот это место пока совсем не понятно
 def stream_graph_updates(user_input: str):
     for event in graph.stream(State(request_txt=user_input)):
         for value in event.values():
-            print("Assistant:", value["response_txt"])
+            return value["response_txt"]
 
-
-while True:
-    try:
-        user_input = input("User: ")
-        if user_input.lower() in ["quit", "exit", "q"]:
-            print("Goodbye!")
-            break
-        stream_graph_updates(user_input)
-    except:
-        # fallback if input() is not available
-        # user_input = "What do you know about LangGraph?"
-        # print("User: " + user_input)
-        # stream_graph_updates(user_input)
-        print("Something went wrong")
-        break

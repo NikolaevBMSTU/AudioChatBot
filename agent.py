@@ -17,9 +17,9 @@ from chat_bot.CustomOllamaLLM import CustomOllamaLLM
 from chat_bot.CustomOllamaLLM import CustomLLMConfig
 
 config = CustomLLMConfig(
-    api_url=os.getenv("OLLAMA_API_URL").strip(),
-    username=os.getenv("OLLAMA_LOGIN").strip(),
-    password=os.getenv("OLLAMA_PASSWORD").strip()
+    api_url=os.getenv("OLLAMA_API_URL"),
+    username=os.getenv("OLLAMA_LOGIN"),
+    password=os.getenv("OLLAMA_PASSWORD")
 )
 
 llm = CustomOllamaLLM(config=config)
@@ -47,9 +47,5 @@ try:
 except Exception:
     pass
 
-# Вот это место пока совсем не понятно
-def stream_graph_updates(user_input: str):
-    for event in graph.stream(State(request_txt=user_input)):
-        for value in event.values():
-            return value["response_txt"]
-
+def agent_invoke(user_input: str):
+    return graph.invoke(State(request_txt=user_input))["response_txt"]

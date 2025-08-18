@@ -1,4 +1,4 @@
-from agent import stream_graph_updates
+from agent import agent_invoke
 
 while True:
     try:
@@ -6,7 +6,7 @@ while True:
         if user_input.lower() in ["quit", "exit", "q"]:
             print("Goodbye!")
             break
-        answer = stream_graph_updates(user_input)
+        answer = agent_invoke(user_input)
         print("Assistant:", answer)
     except Exception as e:
         print("Something went wrong: %s", repr(e))

@@ -1,26 +1,40 @@
-import os   
+import os
 import json
 import requests
-from agent import stream_graph_updates
+import logging
+from logging.handlers import TimedRotatingFileHandler
 
-# def MainProtokol(s,ts = 'Запись'):
-#     dt=time.strftime('%d.%m.%Y %H:%M:')+'00'
-
-#     f=open('log.txt','a')
-#     f.write(dt+';'+str(ts)+';'+str(s)+'\n')
-#     f.close        
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        TimedRotatingFileHandler(os.getenv("LOG_DIR", "bot.log"), when='midnight', interval=1, backupCount=14),
+        logging.StreamHandler()
+    ]
+) 
     
 import http.server
 import socketserver
+from agent import agent_invoke
 
-PORT = 8004  # Choose any available port number here (default: 8000).
+PORT = 8000  # Choose any available port number here (default: 8000).
 DIRECTORY = '.'  # Serve files from the current directory.
 
 class Handler(http.server.SimpleHTTPRequestHandler):
-    # own_host = os.getenv("OWN_HOST").strip()
-    # context_path = os.getenv("CONTEXT_PATH").strip()
-    url = os.getenv("TELEGRAM_URL").strip()
-    token = os.getenv("TELEGRAM_BOT_TOKEN").strip()
+    # own_host = os.getenv("OWN_HOST")
+    # context_path = os.getenv("CONTEXT_PATH")
+    url = os.getenv("TELEGRAM_URL")
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+
+    def log_request(self, code = "-", size = "-"):
+        logging.info(
+            f"{self.client_address[0]} - {self.command} {self.path} - HTTP {code}"
+        )
+
+    def log_error(self, format, *args):
+        logging.error(
+            f"{self.client_address[0]} - {self.command} {self.path} - ERROR: {format % args}"
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
@@ -41,13 +55,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         try:
             json_string=json.loads(post_data)
         except Exception as e:
-            print(repr(e))
-            raise ValueError('Error parsing JSON request')
+            logging.error(f'Error parsing JSON request: {repr(e)}')
         
         chat_id = json_string['message']['chat']['id']
         input_message = json_string['message']['text']
 
-        # print('Get from chat: '+str(chat_id)+', message:'+input_message)
+        logging.info(f"Got message from user_id = {chat_id}")
 
         # Send headers indicating success
         self.send_response(200)
@@ -55,21 +68,23 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
 
         # Invoke Agent
-        response_txt = stream_graph_updates(input_message)
+        response_txt = agent_invoke(input_message)
 
         # Send response in Telegram
         send_message=requests.get(self.url+self.token+'/sendMessage?chat_id='+str(chat_id)+'&text='+str(response_txt))
-        if not send_message: raise ValueError('Не удалось отправить текст в бот. status:'+str(send_message.status_code))
+        if not send_message: logging.error(f"Cannot sent respose to Telegram. Code: {send_message.status_code}")
+        else: logging.info("Respose succesfully sent")
 
 
 def run_server():
     with socketserver.TCPServer(("", PORT), Handler) as httpd:
-        print(f"Serving at port {PORT}")
+        logging.info(f"Serving at port {PORT}")
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
-            print("Shutting down...")
+            logging.info("Shutting down...")
             httpd.shutdown()
+            httpd.server_close()
 
 if __name__ == "__main__":
     run_server()

@@ -9,3 +9,6 @@
 
 # Graph visualization output
 *.png
+
+# Logs
+*.log

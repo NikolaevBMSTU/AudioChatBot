@@ -4,22 +4,24 @@ services:
     ports:
       - "8080:8000"
     environment:
+      - OLLAMA_MODEL=deepseek-r1:8b
       - OLLAMA_API_URL=
       - OLLAMA_LOGIN=
       - OLLAMA_PASSWORD=
       - TELEGRAM_URL="https://api.telegram.org/bot"
       - TELEGRAM_BOT_TOKEN=
+      - LOG_DIR=/var/log/bot/bot.log
     volumes:
       - /var/log/docker/audio_bot:/var/log/bot
     logging:
       driver: "json-file"
       options:
-        max-size: "2048m"
+        max-size: "1024m"
     deploy:
       resources:
         limits:
           cpus: '4.0'
-          memory: 2gb
+          memory: 200gb
           pids: 10
         reservations:
           cpus: '0.25'

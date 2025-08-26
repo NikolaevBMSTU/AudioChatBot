@@ -1,44 +1,48 @@
 import os
+from dotenv import load_dotenv
+
+from requests.auth import HTTPBasicAuth
+
+from typing import Annotated
 from typing_extensions import TypedDict
 
-from langgraph.graph import StateGraph, START, END
+from langchain_ollama import ChatOllama
+from langchain_core.messages import HumanMessage
 
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langgraph.checkpoint.memory import InMemorySaver
+
+load_dotenv()
 
 class State(TypedDict):
-    request_txt: str
-    response_txt: str
-    response_audio: str
+    messages: Annotated[list, add_messages]
+    # request_txt: str
+    # response_txt: str
+    # response_audio: str
 
+auth_config = HTTPBasicAuth(os.getenv("OLLAMA_LOGIN"), os.getenv("OLLAMA_PASSWORD"))
 
-graph_builder = StateGraph(State)
-
-
-from chat_bot.CustomOllamaLLM import CustomOllamaLLM
-from chat_bot.CustomOllamaLLM import CustomLLMConfig
-
-config = CustomLLMConfig(
-    api_url=os.getenv("OLLAMA_API_URL"),
-    username=os.getenv("OLLAMA_LOGIN"),
-    password=os.getenv("OLLAMA_PASSWORD")
+llm = ChatOllama(
+    model=os.getenv("OLLAMA_MODEL", 'llama3.2'),
+    base_url=os.getenv("OLLAMA_API_URL"),
+    client_kwargs={"auth": auth_config},
+    async_client_kwargs={"auth": auth_config}
 )
-
-llm = CustomOllamaLLM(config=config)
 
 
 def chatbot(state: State):
-    state["response_txt"] = llm._call(state["request_txt"])
-    return state
+    return {"messages": [llm.invoke(state["messages"])]}
 
+graph_builder = StateGraph(State)
 
-# The first argument is the unique node name
-# The second argument is the function or object that will be called whenever
-# the node is used.
 graph_builder.add_node("chatbot", chatbot)
 
 graph_builder.add_edge(START, "chatbot")
 graph_builder.add_edge("chatbot", END)
 
-graph = graph_builder.compile()
+memory = InMemorySaver()
+graph = graph_builder.compile(checkpointer=memory, debug=True)
 
 # Compiled graph visualization (optional)
 try:
@@ -47,5 +51,17 @@ try:
 except Exception:
     pass
 
-def agent_invoke(user_input: str):
-    return graph.invoke(State(request_txt=user_input))["response_txt"]
+class WorkingGraph:
+    def __init__(self):
+        self.memory = memory
+        self.graph = graph
+
+    def invoke(self, user_id: str, user_input: str):
+        config = {"configurable": {"thread_id": user_id}}
+        events = self.graph.stream({"messages": [HumanMessage(user_input)]}, config)
+        for event in events:
+            for value in event.values(): 
+                return value["messages"][-1].content
+
+    def clear_memory(self, user_id: str):
+        self.graph.checkpointer.delete_thread(thread_id=user_id)

@@ -15,7 +15,7 @@ logging.basicConfig(
     
 import http.server
 import socketserver
-from agent import agent_invoke
+from agent import WorkingGraph
 
 PORT = 8000  # Choose any available port number here (default: 8000).
 DIRECTORY = '.'  # Serve files from the current directory.
@@ -25,6 +25,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     # context_path = os.getenv("CONTEXT_PATH")
     url = os.getenv("TELEGRAM_URL")
     token = os.getenv("TELEGRAM_BOT_TOKEN")
+    agent = WorkingGraph()
 
     def log_request(self, code = "-", size = "-"):
         logging.info(
@@ -57,7 +58,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             logging.error(f'Error parsing JSON request: {repr(e)}')
         
-        chat_id = json_string['message']['chat']['id']
+        chat_id = str(json_string['message']['chat']['id'])
         input_message = json_string['message']['text']
 
         logging.info(f"Got message from user_id = {chat_id}")
@@ -67,11 +68,21 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Content-type', 'text/plain')
         self.end_headers()
 
+        self.handle_chat_message(chat_id, input_message)
+        
+    def handle_chat_message(self, chat_id: str, input_message: str):
+        if input_message.lower() in ["/clear", "/clean"]:
+            self.agent.clear_memory(chat_id)
+            logging.info(f"Cleared memory for chat: {chat_id}")
+        else:
+            self.respod(chat_id, input_message)
+
+    def respod(self, chat_id: str, input_message: str):
         # Invoke Agent
-        response_txt = agent_invoke(input_message)
+        response_txt = self.agent.invoke(chat_id, input_message)
 
         # Send response in Telegram
-        send_message=requests.get(self.url+self.token+'/sendMessage?chat_id='+str(chat_id)+'&text='+str(response_txt))
+        send_message = requests.get(self.url+self.token+'/sendMessage?chat_id='+str(chat_id)+'&text='+str(response_txt))
         if not send_message: logging.error(f"Cannot sent respose to Telegram. Code: {send_message.status_code}")
         else: logging.info("Respose succesfully sent")
 

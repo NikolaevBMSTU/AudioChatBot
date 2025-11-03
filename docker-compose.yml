@@ -8,9 +8,12 @@ services:
       - OLLAMA_API_URL=
       - OLLAMA_LOGIN=
       - OLLAMA_PASSWORD=
+      - OWN_HOST=https://vsnikolaev.ru
+      - CONTEXT_PATH=
       - TELEGRAM_BOT_TOKEN=
       - TELEGRAM_WEBHOOK_SECRET_TOKEN=
-      - LOG_DIR=/var/log/bot/bot.log
+      - TAVILY_API_KEY=
+      - LOG_DIR=/var/log/bot
     volumes:
       - /var/log/docker/audio_bot:/var/log/bot
     logging:

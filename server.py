@@ -15,7 +15,7 @@ logging.basicConfig(
     
 import http.server
 import socketserver
-from agent import WorkingGraph
+from agent import ChatBot
 
 PORT = 8000  # Choose any available port number here (default: 8000).
 DIRECTORY = '.'  # Serve files from the current directory.
@@ -25,7 +25,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     # context_path = os.getenv("CONTEXT_PATH")
     url = os.getenv("TELEGRAM_URL")
     token = os.getenv("TELEGRAM_BOT_TOKEN")
-    agent = WorkingGraph()
+    agent = ChatBot()
 
     def log_request(self, code = "-", size = "-"):
         logging.info(

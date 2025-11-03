@@ -1,6 +1,10 @@
-from agent import WorkingGraph
+from dotenv import load_dotenv
 
-agent = WorkingGraph()
+load_dotenv()
+
+from agent import ChatBot
+
+agent = ChatBot()
 
 while True:
     try:
@@ -8,12 +12,15 @@ while True:
         if user_input.lower() in ["quit", "exit", "q"]:
             print("Goodbye!")
             break
-        if user_input.lower() in ["clear"]:
+        if user_input.lower() in ["clear", "clean"]:
             agent.clear_memory("1")
             print("Memory cleared")
             continue
+
         answer = agent.invoke("1", user_input)
-        print("Assistant:", answer)
+        
+        print("Assistant:", answer['messages'][-1].content)
+
     except Exception as e:
         print("Something went wrong: %s", repr(e))
         break

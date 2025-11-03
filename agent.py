@@ -1,25 +1,20 @@
 import os
-from dotenv import load_dotenv
 
 from requests.auth import HTTPBasicAuth
 
-from typing import Annotated
-from typing_extensions import TypedDict
-
 from langchain_ollama import ChatOllama
-from langchain_core.messages import HumanMessage
+from langchain.agents import create_agent, AgentState
+from langchain.agents.middleware import SummarizationMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage
 
-from langgraph.graph import StateGraph, START, END
-from langgraph.graph.message import add_messages
+from langchain_community.document_loaders import WikipediaLoader
+from langchain_tavily import TavilySearch
+from langchain.tools import tool
+
+from langchain.agents.middleware import before_model
+from langgraph.runtime import Runtime
+
 from langgraph.checkpoint.memory import InMemorySaver
-
-load_dotenv()
-
-class State(TypedDict):
-    messages: Annotated[list, add_messages]
-    # request_txt: str
-    # response_txt: str
-    # response_audio: str
 
 auth_config = HTTPBasicAuth(os.getenv("OLLAMA_LOGIN"), os.getenv("OLLAMA_PASSWORD"))
 
@@ -27,41 +22,91 @@ llm = ChatOllama(
     model=os.getenv("OLLAMA_MODEL", 'llama3.2'),
     base_url=os.getenv("OLLAMA_API_URL"),
     client_kwargs={"auth": auth_config},
-    async_client_kwargs={"auth": auth_config}
+    async_client_kwargs={"auth": auth_config},
 )
 
+@tool
+def search_web(query: str):
+    
+    """ Tools for retrieve docs from web search if you need specific information about current situation"""
 
-def chatbot(state: State):
-    return {"messages": [llm.invoke(state["messages"])]}
+    # Search
+    tavily_search = TavilySearch(max_results=1)
+    search_docs = tavily_search.invoke(query)
 
-graph_builder = StateGraph(State)
+     # Format
+    formatted_search_docs = "\n\n---\n\n".join(
+        [
+            f'<Document href="{doc["url"]}">\n{doc["content"]}\n</Document>'
+            for doc in search_docs['results']
+        ]
+    )
 
-graph_builder.add_node("chatbot", chatbot)
+    return {"context": [formatted_search_docs]}
 
-graph_builder.add_edge(START, "chatbot")
-graph_builder.add_edge("chatbot", END)
+@tool
+def search_wikipedia(query: str):
+    
+    """ Retrieve docs from wikipedia """
 
-memory = InMemorySaver()
-graph = graph_builder.compile(checkpointer=memory, debug=True)
+    # Search
+    search_docs = WikipediaLoader(query, load_max_docs=2).load()
 
-# Compiled graph visualization (optional)
-try:
-    with open("graph.png", "wb") as png:
-        png.write(graph.get_graph().draw_mermaid_png())
-except Exception:
-    pass
+     # Format
+    formatted_search_docs = "\n\n---\n\n".join(
+        [
+            f'<Document source="{doc.metadata["source"]}" page="{doc.metadata.get("page", "")}">\n{doc.page_content}\n</Document>'
+            for doc in search_docs
+        ]
+    )
 
-class WorkingGraph:
+    return {"context": [formatted_search_docs]}
+
+de_lehrer_system_prompt = """
+    Sie sind eine erfahrene Deutschlehrer für internationale Schüler.
+    Beantworten Sie die Frage so, dass sie auch für Schüler auf A2-Niveau verständlich ist.
+    Verwenden Sie keine Tabellen zur Beantwortung der Fragen.
+    """
+de_text_check_prompt = """
+    Überprüfen Sie Ihren geschriebenen Text und korrigieren Sie Grammatik-, Wortschatz- und Rechtschreibfehler.
+    ```
+    {text}
+    ```
+    Stellen Sie eine oder mehrere Fragen zum Text, um das Gespräch am Laufen zu halten, oder geben Sie eine Sprachlernaufgabe.
+    """
+
+@before_model
+def messages_logging(state: AgentState, runtime: Runtime) -> None:
+    messages = state["messages"]
+
+    with open(f"bot_.log", 'a', encoding='utf-8') as file:
+        file.write(str(messages) + "\n")
+
+    return
+
+
+agent = create_agent(
+    llm,
+    middleware=[
+        SummarizationMiddleware(
+            llm,
+            max_tokens_before_summary=500,
+            messages_to_keep=10
+        ),
+        messages_logging
+    ],
+    tools=[search_web],
+    checkpointer=InMemorySaver(),
+    system_prompt=de_lehrer_system_prompt
+)
+
+class ChatBot:
     def __init__(self):
-        self.memory = memory
-        self.graph = graph
+        self.agent = agent
 
     def invoke(self, user_id: str, user_input: str):
         config = {"configurable": {"thread_id": user_id}}
-        events = self.graph.stream({"messages": [HumanMessage(user_input)]}, config)
-        for event in events:
-            for value in event.values(): 
-                return value["messages"][-1].content
+        return self.agent.invoke({"messages": [HumanMessage(de_text_check_prompt.format(text=user_input))]}, config)
 
     def clear_memory(self, user_id: str):
-        self.graph.checkpointer.delete_thread(thread_id=user_id)
+        self.agent.checkpointer.delete_thread(thread_id=user_id)

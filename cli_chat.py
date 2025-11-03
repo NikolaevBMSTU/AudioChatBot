@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from agent import ChatBot
+from src.agent import ChatBot
 
 agent = ChatBot()
 

@@ -5,7 +5,7 @@ from requests.auth import HTTPBasicAuth
 from langchain_ollama import ChatOllama
 from langchain.agents import create_agent, AgentState
 from langchain.agents.middleware import SummarizationMiddleware
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import HumanMessage
 
 from langchain_community.document_loaders import WikipediaLoader
 from langchain_tavily import TavilySearch

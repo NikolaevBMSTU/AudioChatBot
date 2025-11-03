@@ -1,15 +1,15 @@
 services:
   audiobot:
-    image: audio_chat_bot:0.1
+    image: chat_bot:0.1
     ports:
       - "8080:8000"
     environment:
-      - OLLAMA_MODEL=deepseek-r1:8b
+      - OLLAMA_MODEL=gpt-oss:20b
       - OLLAMA_API_URL=
       - OLLAMA_LOGIN=
       - OLLAMA_PASSWORD=
-      - TELEGRAM_URL="https://api.telegram.org/bot"
       - TELEGRAM_BOT_TOKEN=
+      - TELEGRAM_WEBHOOK_SECRET_TOKEN=
       - LOG_DIR=/var/log/bot/bot.log
     volumes:
       - /var/log/docker/audio_bot:/var/log/bot
@@ -20,8 +20,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '4.0'
-          memory: 200gb
+          cpus: '8.0'
+          memory: 20gb
           pids: 10
         reservations:
           cpus: '0.25'

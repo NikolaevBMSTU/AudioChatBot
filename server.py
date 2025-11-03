@@ -15,7 +15,7 @@ logging.basicConfig(
     
 import http.server
 import socketserver
-from agent import ChatBot
+from src.agent import ChatBot
 
 PORT = 8000  # Choose any available port number here (default: 8000).
 DIRECTORY = '.'  # Serve files from the current directory.

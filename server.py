@@ -8,7 +8,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        TimedRotatingFileHandler(os.getenv("LOG_DIR", "bot.log"), when='midnight', interval=1, backupCount=14),
+        TimedRotatingFileHandler(f"{os.getenv("LOG_DIR", ".")}/bot.log", when='midnight', interval=1, backupCount=14),
         logging.StreamHandler()
     ]
 ) 

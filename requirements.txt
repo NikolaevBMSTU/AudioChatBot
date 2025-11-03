@@ -6,4 +6,4 @@ wikipedia==1.4.0
 # fastapi
 # uvicorn
 python-telegram-bot[webhooks]==22.5
-dotenv=0.9.9
+dotenv==0.9.9

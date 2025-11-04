@@ -11,8 +11,9 @@ from langchain_community.document_loaders import WikipediaLoader
 from langchain_tavily import TavilySearch
 from langchain.tools import tool
 
-from langchain.agents.middleware import before_model
+from langchain.agents.middleware import before_model, HumanInTheLoopMiddleware
 from langgraph.runtime import Runtime
+from langgraph.types import Command
 
 from langgraph.checkpoint.memory import InMemorySaver
 
@@ -106,6 +107,10 @@ class ChatBot:
     def invoke(self, user_id: str, user_input: str):
         config = {"configurable": {"thread_id": user_id}}
         return self.agent.invoke({"messages": [HumanMessage(de_text_check_prompt.format(text=user_input))]}, config)
+    
+    def approve_action(self, user_id: str, user_decision: str):
+        config = {"configurable": {"thread_id": user_id}}
+        return self.agent.invoke(Command(resume={"decisions": [{"type": user_decision}]}), config)
 
     def clear_memory(self, user_id: str):
         self.agent.checkpointer.delete_thread(thread_id=user_id)

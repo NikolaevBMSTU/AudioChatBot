@@ -22,9 +22,16 @@ agent = ChatBot()
 
 async def llm_request(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_message and update.effective_message.text:
-        logger.info("Pass request to LLM")
-        answer = agent.invoke(update.effective_user.id, update.effective_message.text)
-        await update.message.reply_text(answer["messages"][-1].content)
+        chat_id = update.effective_chat.id
+        input_message = update.effective_message.text
+        match input_message.lower():
+            case "/clear" | "/clean":
+                logging.info(f"Cleared memory for chat: {chat_id}")
+                agent.clear_memory(chat_id)
+            case _:
+                logger.info("Pass request to LLM")
+                answer = agent.invoke(chat_id, input_message)
+                await update.message.reply_text(answer["messages"][-1].content)
 
 if __name__ == "__main__":
     app = ApplicationBuilder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()

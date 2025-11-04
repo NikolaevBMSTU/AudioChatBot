@@ -62,18 +62,17 @@ def search_wikipedia(query: str):
 
     return {"context": [formatted_search_docs]}
 
-de_lehrer_system_prompt = """
-    Sie sind eine erfahrene Deutschlehrer für internationale Schüler.
-    Beantworten Sie die Frage so, dass sie auch für Schüler auf A2-Niveau verständlich ist.
-    Verwenden Sie keine Tabellen zur Beantwortung der Fragen.
-    """
-de_text_check_prompt = """
-    Überprüfen Sie Ihren geschriebenen Text und korrigieren Sie Grammatik-, Wortschatz- und Rechtschreibfehler.
-    ```
-    {text}
-    ```
-    Stellen Sie eine oder mehrere Fragen zum Text, um das Gespräch am Laufen zu halten, oder geben Sie eine Sprachlernaufgabe.
-    """
+de_lehrer_system_prompt = (
+    "Sie sind eine erfahrene Deutschlehrer für internationale Schüler."
+    "Beantworten Sie die Frage so, dass sie auch für Schüler auf A2-Niveau verständlich ist."
+    "Verwenden Sie keine Tabellen zur Beantwortung der Fragen."
+)
+
+de_text_check_prompt = (
+    "Überprüfen Sie Ihren geschriebenen Text und korrigieren Sie Grammatik-, Wortschatz- und Rechtschreibfehler."
+    "```\n{text}\n```"
+    "Stellen Sie eine oder mehrere Fragen zum Text, um das Gespräch am Laufen zu halten, oder geben Sie eine Sprachlernaufgabe."
+)
 
 @before_model
 def messages_logging(state: AgentState, runtime: Runtime) -> None:
@@ -95,7 +94,7 @@ agent = create_agent(
         ),
         messages_logging
     ],
-    tools=[search_web],
+    tools=[search_web, search_wikipedia],
     checkpointer=InMemorySaver(),
     system_prompt=de_lehrer_system_prompt
 )

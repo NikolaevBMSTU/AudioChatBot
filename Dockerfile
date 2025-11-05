@@ -14,7 +14,6 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 WORKDIR /app
 
-COPY src/bot.py /app
-COPY src/agent.py /app
+COPY src/. /app/
 
 ENTRYPOINT ["python3","bot.py"]

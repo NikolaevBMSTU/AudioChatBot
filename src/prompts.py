@@ -15,9 +15,9 @@ de_text_check_prompt = (
 )
 
 de_uhr_task_prompt = (
-    "Geben Sie eine Sprachlernaufgabe, die Tageszeit oder die Uhrzeit auf der Uhr zu wiederholen."
+    "Geben Sie eine schriftliche Sprachlernaufgabe, die Tageszeit oder die Uhrzeit auf der Uhr zu wiederholen nicht mehr als 100 Wörter lang."
 )
 
 de_task_prompt = (
-    "Geben Sie eine Sprachlernaufgabe."
+    "Geben Sie eine schriftliche Sprachlernaufgabe nicht mehr als 150 Wörter lang."
 )

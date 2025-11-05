@@ -36,7 +36,7 @@ async def llm_request(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 await update.message.reply_text(answer["messages"][-1].content)
                 return
             case [*_, "/task"]:
-                logging.info(f"Prepare Uhr task for chat: {chat_id}")
+                logging.info(f"Prepare task for chat: {chat_id}")
                 answer = agent.invoke(chat_id, prompts.de_task_prompt)
                 await update.message.reply_text(answer["messages"][-1].content)
                 return

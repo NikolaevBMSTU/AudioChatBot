@@ -7,15 +7,14 @@ from langchain.agents import create_agent, AgentState
 from langchain.agents.middleware import SummarizationMiddleware
 from langchain_core.messages import HumanMessage
 
-from langchain_community.document_loaders import WikipediaLoader
-from langchain_tavily import TavilySearch
-from langchain.tools import tool
-
 from langchain.agents.middleware import before_model, HumanInTheLoopMiddleware
 from langgraph.runtime import Runtime
 from langgraph.types import Command
 
 from langgraph.checkpoint.memory import InMemorySaver
+
+from tools import search_web, search_wikipedia
+import prompts
 
 auth_config = HTTPBasicAuth(os.getenv("OLLAMA_LOGIN"), os.getenv("OLLAMA_PASSWORD"))
 
@@ -26,54 +25,6 @@ llm = ChatOllama(
     async_client_kwargs={"auth": auth_config},
 )
 
-@tool
-def search_web(query: str):
-    
-    """ Tools for retrieve docs from web search if you need specific information about current situation"""
-
-    # Search
-    tavily_search = TavilySearch(max_results=1)
-    search_docs = tavily_search.invoke(query)
-
-     # Format
-    formatted_search_docs = "\n\n---\n\n".join(
-        [
-            f'<Document href="{doc["url"]}">\n{doc["content"]}\n</Document>'
-            for doc in search_docs['results']
-        ]
-    )
-
-    return {"context": [formatted_search_docs]}
-
-@tool
-def search_wikipedia(query: str):
-    
-    """ Retrieve docs from wikipedia """
-
-    # Search
-    search_docs = WikipediaLoader(query, load_max_docs=2).load()
-
-     # Format
-    formatted_search_docs = "\n\n---\n\n".join(
-        [
-            f'<Document source="{doc.metadata["source"]}" page="{doc.metadata.get("page", "")}">\n{doc.page_content}\n</Document>'
-            for doc in search_docs
-        ]
-    )
-
-    return {"context": [formatted_search_docs]}
-
-de_lehrer_system_prompt = (
-    "Sie sind eine erfahrene Deutschlehrer für internationale Schüler."
-    "Beantworten Sie die Frage so, dass sie auch für Schüler auf A2-Niveau verständlich ist."
-    "Verwenden Sie keine Tabellen zur Beantwortung der Fragen."
-)
-
-de_text_check_prompt = (
-    "Überprüfen Sie Ihren geschriebenen Text und korrigieren Sie Grammatik-, Wortschatz- und Rechtschreibfehler."
-    "```\n{text}\n```"
-    "Stellen Sie eine oder mehrere Fragen zum Text, um das Gespräch am Laufen zu halten, oder geben Sie eine Sprachlernaufgabe."
-)
 
 @before_model
 def messages_logging(state: AgentState, runtime: Runtime) -> None:
@@ -97,7 +48,7 @@ agent = create_agent(
     ],
     tools=[search_web, search_wikipedia],
     checkpointer=InMemorySaver(),
-    system_prompt=de_lehrer_system_prompt
+    system_prompt=prompts.de_lehrer_system_prompt
 )
 
 class ChatBot:
@@ -106,7 +57,7 @@ class ChatBot:
 
     def invoke(self, user_id: str, user_input: str):
         config = {"configurable": {"thread_id": user_id}}
-        return self.agent.invoke({"messages": [HumanMessage(de_text_check_prompt.format(text=user_input))]}, config)
+        return self.agent.invoke({"messages": [HumanMessage(user_input)]}, config)
     
     def approve_action(self, user_id: str, user_decision: str):
         config = {"configurable": {"thread_id": user_id}}
